@@ -30,6 +30,8 @@ def handler(ctx, data: io.BytesIO=None):
             headers = {'Content-type': 'application/json'}
             x = requests.get(bounce_postback_url.format(data=json.dumps(item)), headers=headers)
             logging.getLogger().info(x.text)
+            print("Log data: {}".format(json.dumps(item)))
+            print("Response: {}".format(x.text))
        
     except (Exception, ValueError) as ex:
         logging.getLogger().info(str(ex))
