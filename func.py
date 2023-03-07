@@ -21,6 +21,8 @@ bounce_postback_url = "https://ascentwebs.com/dyn-http-handler.php?type=b&e={ema
 
 def handler(ctx, data: io.BytesIO=None):
 
+    logging.getLogger().info("Starting function...")
+
     # Input is one or more Log events; parse into JSON and loop through them
     try:
         logs = json.loads(data.getvalue())
