@@ -29,7 +29,7 @@ def handler(ctx, data: io.BytesIO=None):
 
             headers = {'Content-type': 'application/json'}
             x = requests.get(bounce_postback_url.format(data=json.dumps(item)), headers=headers)
-            logging.getLogger().info(x.text)
+            logging.getLogger().info(f"Response: {x.text}")
 
             return response.Response(ctx, response_data=json.dumps(
                 {"message": "Log data: {}\nResponse: {}".format(json.dumps(item), x.text)}),
