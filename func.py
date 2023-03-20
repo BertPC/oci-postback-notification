@@ -17,9 +17,11 @@ import requests
 
 from fdk import response
 
+
 postback_url_with_fields = "https://ascentwebs.com/dyn-http-handler.php?type={notifytype}&e={email}&message={message}" 
+postback_url_no_fields = "https://ascentwebs.com/dyn-http-handler.php"
 bounce_postback_querystring = "&bt={bouncetype}&bc={bouncecode}&br={bouncerule}&dc={diagnostic}&s={status}"
-bounce_postback_url_no_fields = "https://ascentwebs.com/dyn-http-handler.php"
+
 
 def handler(ctx, data: io.BytesIO=None):
 
@@ -30,7 +32,7 @@ def handler(ctx, data: io.BytesIO=None):
         for item in logs: 
 
             # Pull postback field values from log event
-            log_data = item['logContent']['data']
+            log_data = item['data']
             querystring_values = {
                 "notifytype": log_data['action'],  # bounce, complaint, open, click
                 "email": log_data['recipient'],
@@ -59,7 +61,7 @@ def handler(ctx, data: io.BytesIO=None):
             # GET method
             response = requests.get(postback_url_with_fields.format(**querystring_values))
             # POST method
-            #response = requests.get(bounce_postback_url_no_fields, params=querystring_values)
+            #response = requests.get(postback_url_no_fields, params=querystring_values)
 
             logging.getLogger().info("Postback sent: {} Response: HTTP {} --- {}".format(response.url, response.status_code, response.text.replace('\n', '')))
        
