@@ -17,11 +17,11 @@ import requests
 
 from fdk import response
 
-bounce_postback_url = "https://ascentwebs.com/dyn-http-handler.php?type=b&e={email}&br={bouncerule}&bt={bouncetype}&bc={bouncecode}&dc={diagnostic}&s={status}&c={XCampaignID}&sub={XSubscriberID}&q={XUserData3}&z={XMultipleDashes}&LIVE=1&data={logdata}"
+postback_url_with_fields = "https://ascentwebs.com/dyn-http-handler.php?type={notifytype}&e={email}&message={message}" 
+bounce_postback_querystring = "&bt={bouncetype}&bc={bouncecode}&br={bouncerule}&dc={diagnostic}&s={status}"
+bounce_postback_url_no_fields = "https://ascentwebs.com/dyn-http-handler.php"
 
 def handler(ctx, data: io.BytesIO=None):
-
-    logging.getLogger().info("Starting function...")
 
     # Input is one or more Log events; parse into JSON and loop through them
     try:
@@ -29,25 +29,40 @@ def handler(ctx, data: io.BytesIO=None):
 
         for item in logs: 
 
-            headers = {'Content-type': 'application/json'}
-            x = requests.get(bounce_postback_url.format(data=json.dumps(item)), headers=headers)
-            logging.getLogger().info("Log data: {} --- Response: {}".format(json.dumps(item), x.text))
+            # Pull postback field values from log event
+            log_data = item['logContent']['data']
+            querystring_values = {
+                "notifytype": log_data['action'],  # bounce, complaint, open, click
+                "email": log_data['recipient'],
+                "message": log_data['message']  # high-level, human-readable summary of event
+            }
+
+            if log_data['action'] == 'bounce':
+                querystring_values.update({
+                    "bouncetype": log_data['errorType'],
+                    "bouncecode": log_data['bounceCode'],
+                    "bouncerule": log_data['bounceCategory'],
+                    "diagnostic": log_data['smtpStatus'],
+                    "status": log_data['bounceCode']
+                })
+
+            # For custom headers, gather them (if present) then can loop through
+            #headers = log_data['headers']  # gives a dictionary of (header_name -> value) pairs
+
+            # Other possibly helpful fields to include, which were not available in Dyn:
+            # (see for list of all available fields)
+            #message_id = log_data['messageId']  # original SMTP message ID
+            #action = log_data['action']  # type of log event (accept, relay, bounce, open, click, etc.)
+            #sender = log_data['sender']  # sender of the message
+            #recip_domain = log_data['receivingDomain']  # Recipient domain (gmail.com, comcast.net, hotmail.com, etc.)
+
+            # GET method
+            response = requests.get(postback_url_with_fields.format(**querystring_values))
+            # POST method
+            #response = requests.get(bounce_postback_url_no_fields, params=querystring_values)
+
+            logging.getLogger().info("Postback sent: {} Response: HTTP {} --- {}".format(response.url, response.status_code, response.text.replace('\n', '')))
        
     except (Exception, ValueError) as ex:
-        logging.getLogger().info(str(ex))
+        logging.getLogger().error(str(ex))
         return
-
-
-#    name = "World"
-#    try:
-#        body = json.loads(data.getvalue())
-#        name = body.get("name")
-#    except (Exception, ValueError) as ex:
-#        logging.getLogger().info('Error parsing Logging event data payload into JSON: ' + str(ex))
-#
-#    logging.getLogger().info("Inside Python Hello World function")
-#    return response.Response(
-#        ctx, response_data=json.dumps(
-#            {"message": "Hello {0}".format(name)}),
-#        headers={"Content-Type": "application/json"}
-#    )
